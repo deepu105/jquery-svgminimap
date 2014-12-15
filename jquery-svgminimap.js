@@ -1,6 +1,7 @@
 /**
- * Created by Daniel on 12-07-2014.
- * Based on svgPan - https://github.com/talos/jquery-svgpan
+ * Created by Deepu KS on 12-12-2014.
+ * Based on svgPan and Jquery-svgminimap - https://github.com/talos/jquery-svgpan, https://code.google.com/p/svgpan/
+ * https://github.com/webmutation/jquery-svgminimap
  */
 /*global define, jQuery, window*/
 
@@ -18,7 +19,8 @@
     var NONE = 0,
         PAN = 1,
         DRAG = 2,
-        init = function (root, svgRoot, brushID, enablePan, enableZoom, enableDrag, zoomScale) {
+		zoomExternal=null,
+        init = function (root, svgRoot, brushID, enablePan, enableZoom, enableDrag, zoomScale, zoomRange) {
 
             var state = NONE,
                 stateTarget,
@@ -32,6 +34,7 @@
                 offsetIsBroken = Math.abs($root.offset().left) > 1e5,
                 isMouseOverElem = false,
                 isMouseOverBrushElem = false,
+				scale = 20,
 
                 /**
                  * Dumps a matrix to a string (useful for debug).
@@ -104,7 +107,7 @@
                 panCanvas = function (dx, dy, dt) {
                     //Optionally pan with time tween
                     //set brush coordinates if map was translated.
-                    var vp = document.getElementById("viewport"),
+                    var vp = svgRoot,
                         canvasScale = vp.getCTM().a;
 
                     var bdx = ($brush.getCTM().e * (scale * canvasScale));
@@ -119,7 +122,7 @@
                     var brushWidth,
                         brushHeight,
                         scale = 20, //TODO: replace this with minimapScale
-                        vp = document.getElementById("viewport"),
+                        vp = svgRoot,
                         canvasScale = vp.getCTM().a,
                         dx = (vp.getCTM().e ),
                         dy = (vp.getCTM().f ),
@@ -303,7 +306,7 @@
 
                     var g = $brush[0],
                         p,
-                        vp = document.getElementById("viewport"),
+                        vp = svgRoot,
                         vpzoom = vp.getCTM().a,
                         canvasScale = g.getCTM().a;
 
@@ -392,13 +395,13 @@
                     //console.log("handleBrushMouseLeave");
                     // unbind our mousemove listener only when we no longer have mouse in view
                     if (isMouseOverBrushElem) {
-                        $root.unbind('mousemove', handleBrushMouseMove);
+                        $brush.unbind('mousemove', handleBrushMouseMove);
                         isMouseOverBrushElem = false;
                     }
                     state = NONE;
                 }
             ;
-
+			zoomExternal=handleMouseWheel;
             /**
              * Register handlers
              */
@@ -464,15 +467,17 @@
      Enable SVG panning on an SVG element.
 
      @param canvasId the ID of an element to use as the window canvas to display what is inside the brush area.  Required.
-     @param brushID the ID of an element to use as the window canvas to disply what is inside the brush area.  Required.
+     @param brushID the ID of an element to use as the window canvas to disply the brush area.  Required.
      @param enablePan Boolean enable or disable panning (default enabled)
      @param enableZoom Boolean enable or disable zooming (default enabled)
+	 @param enableDrag Boolean enable or disable draging (default disabled)
      @param zoomScale Float zoom sensitivity, defaults to .2
      @param zoomRange Float zoom range, defaults to [0.25,2] (1/4x, 2x)
      **/
-    $.fn.svgMiniMap = function (canvasId, brushID, enablePan, enableZoom, zoomScale, zoomRange) {
+    $.fn.svgMiniMap = function (canvasId, brushID, enablePan, enableZoom, enableDrag, zoomScale, zoomRange) {
         enablePan = typeof enablePan !== 'undefined' ? enablePan : true;
         enableZoom = typeof enableZoom !== 'undefined' ? enableZoom : true;
+		enableDrag = typeof enableDrag !== 'undefined' ? enableDrag : false;
         zoomScale = typeof zoomScale !== 'undefined' ? zoomScale : 0.25;
         zoomRange = typeof zoomRange !== 'undefined' ? zoomRange : [0.5, 2];
 
@@ -487,11 +492,27 @@
                 viewport = $el.find('#' + canvasId)[0];
                 if (viewport) {
                     $el.data('svgMiniMap', true);
-                    init($el[0], viewport, brushID, enablePan, enableZoom, zoomScale, zoomRange);
+                    init($el[0], viewport, brushID, enablePan, enableZoom, enableDrag, zoomScale, zoomRange);
                 } else {
                     throw "Could not find viewport with id #" + canvasId;
                 }
             }
         });
+    };
+	$.fn.svgMiniMapZoom= function (evt) {
+		var zEvt={
+				returnValue:true,
+				target: {
+					ownerDocument: document
+				},
+				wheelDelta:0,
+				detail:0,
+				clientX: document.body.clientWidth/2,
+				clientY: document.body.clientHeight/2
+			};
+		evt = typeof evt !== 'undefined' ? evt : zEvt;
+		
+        zoomExternal(evt);
+                
     };
 }));
