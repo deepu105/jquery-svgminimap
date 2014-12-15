@@ -1,4 +1,4 @@
-jquery-svgminimap
+svg-minimap
 =================
 v0.0.2
 
